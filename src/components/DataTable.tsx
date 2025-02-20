@@ -8,26 +8,32 @@ export const DataTable: React.FC = () => {
   if (!processedData) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
+    <div className="rounded-lg border">
+      <div className="relative w-full overflow-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="[&_tr]:border-b">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
               {processedData.headers.map((header) => (
                 <th
                   key={header}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                 >
                   {header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="[&_tr:last-child]:border-0">
             {filteredData.slice(0, 100).map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50">
+              <tr
+                key={idx}
+                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+              >
                 {processedData.headers.map((header) => (
-                  <td key={header} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td
+                    key={header}
+                    className="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                  >
                     {row[header] === null || row[header] === undefined ? '-' : String(row[header])}
                   </td>
                 ))}
@@ -37,7 +43,7 @@ export const DataTable: React.FC = () => {
         </table>
       </div>
       {filteredData.length > 100 && (
-        <div className="px-6 py-3 bg-gray-50 text-sm text-gray-500">
+        <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
           Showing first 100 rows of {filteredData.length} total rows
         </div>
       )}

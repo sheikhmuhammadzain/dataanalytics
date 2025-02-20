@@ -66,59 +66,52 @@ export const DataChat: React.FC = () => {
   if (!processedData) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Bot className="w-6 h-6 text-blue-600" />
-        <h3 className="text-lg font-semibold">Chat with Your Data</h3>
-      </div>
-
-      <div className="h-[400px] flex flex-col">
-        <div className="flex-1 overflow-y-auto mb-4 space-y-4">
-          {messages.map((message, index) => (
+    <div className="h-[400px] flex flex-col">
+      <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+          >
             <div
-              key={index}
-              className={`flex ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
+              className={`max-w-[80%] rounded-lg p-3 ${
+                message.role === 'user'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted'
               }`}
             >
-              <div
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              </div>
+              <p className="whitespace-pre-wrap text-sm">{message.content}</p>
             </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg p-3">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-              </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-muted rounded-lg p-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask questions about your data..."
-            className="flex-1 rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </form>
+          </div>
+        )}
       </div>
+
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask questions about your data..."
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isLoading}
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !input.trim()}
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
     </div>
   );
 };

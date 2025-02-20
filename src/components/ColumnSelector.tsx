@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDataStore } from '../store/dataStore';
+import { Check } from 'lucide-react';
 
 export const ColumnSelector: React.FC = () => {
   const { processedData, selectedColumns, setSelectedColumns } = useDataStore();
@@ -15,21 +16,27 @@ export const ColumnSelector: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Column Selection</h3>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {processedData.headers.map(column => (
-          <label key={column} className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={selectedColumns.includes(column)}
-              onChange={() => handleColumnToggle(column)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">{column}</span>
-          </label>
-        ))}
-      </div>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {processedData.headers.map(column => (
+        <label
+          key={column}
+          className="flex items-center space-x-2"
+        >
+          <div
+            className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+              selectedColumns.includes(column)
+                ? 'bg-primary border-primary'
+                : 'border-primary'
+            }`}
+            onClick={() => handleColumnToggle(column)}
+          >
+            {selectedColumns.includes(column) && (
+              <Check className="h-3 w-3 text-primary-foreground" />
+            )}
+          </div>
+          <span className="text-sm">{column}</span>
+        </label>
+      ))}
     </div>
   );
 };
