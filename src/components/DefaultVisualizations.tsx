@@ -42,7 +42,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
   onExplain,
   isExplaining
 }) => (
-  <div className="flex flex-col h-full rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg relative">
+  <div className="flex flex-col h-full rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg">
     <div className="flex items-center justify-between p-6 border-b border-indigo-500/10">
       <div className="space-y-1.5">
         <h3 className="text-lg font-semibold text-white/90">{title}</h3>
@@ -53,16 +53,19 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <button
             onClick={onExplain}
             disabled={isExplaining}
-            className="relative group z-20"
+            className="group relative inline-block"
           >
-            {isExplaining ? (
-              <Loader2 className="h-5 w-5 text-indigo-400 animate-spin" />
-            ) : (
-              <HelpCircle className="h-5 w-5 text-indigo-400/50 hover:text-indigo-400 transition-colors" />
-            )}
-            <span className="absolute top-0 left-full ml-2 px-4 py-2 bg-black/80 backdrop-blur-sm rounded text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
-              Explain with AI
-            </span>
+         {isExplaining ? (
+  <Loader2 className="h-5 w-5 text-indigo-400 animate-spin" />
+) : (
+  <HelpCircle className="h-5 w-5 text-indigo-400/50 hover:text-indigo-400 transition-colors" />
+)}
+<div className="absolute left-full top-1/2 -translate-y-1/2 pl-2 pointer-events-none">
+  <div className="bg-black/90 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-[1000]">
+    Explain
+  </div>
+</div>
+
           </button>
         </div>
         <div className="flex-shrink-0">
@@ -507,6 +510,6 @@ Please provide insights about:
         onClose={() => setModalOpen(false)}
         content={explanation}
       />
-    </>
+    </>    
   );
 };
