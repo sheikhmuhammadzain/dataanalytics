@@ -57,31 +57,33 @@ export const LandingPage: React.FC = () => {
       </header>
 
       <main className="relative flex-1 flex items-center">
-        <div className="container py-24">
+        <div className="container py-12 md:py-24">
           <motion.div 
             initial="initial"
             animate="animate"
             variants={stagger}
-            className="grid lg:grid-cols-2 gap-12 items-center"
+            className="flex flex-col lg:flex-row items-center gap-12"
           >
             <motion.div 
               variants={fadeIn}
-              className="space-y-8"
+              className="flex-1 space-y-8 max-w-3xl"
             >
               <div className="space-y-6">
-                <h1 className="text-6xl sm:text-7xl font-bold tracking-tight text-white">
+                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white">
                   Transform Your Data into{' '}
                   <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 text-transparent bg-clip-text">
                     Powerful Insights
                   </span>
                 </h1>
-                <p className="text-xl text-white/70 max-w-xl">
+                <p className="text-lg sm:text-xl text-white/70">
                   Upload your CSV data and instantly get AI-powered analytics, beautiful visualizations, and deep insights.
                 </p>
               </div>
 
-              <div className="flex flex-col items-center max-w-md space-y-6">
-                <FileUpload />
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="w-full sm:w-auto">
+                  <FileUpload />
+                </div>
                 <div className="flex gap-6 items-center text-sm text-white/50">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-indigo-400" />
@@ -98,40 +100,42 @@ export const LandingPage: React.FC = () => {
             {/* Feature preview cards */}
             <motion.div 
               variants={fadeIn}
-              className="relative hidden lg:block"
+              className="w-full lg:w-auto"
             >
-              <div className="absolute top-0 -left-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
-              <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
-              <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
-              
-              <div className="relative space-y-4">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10"
-                >
-                  <div className="flex items-center gap-3 text-white/70">
-                    <LineChart className="h-5 w-5 text-indigo-400" />
-                    <span className="font-medium">Advanced Analytics</span>
-                  </div>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 ml-6"
-                >
-                  <div className="flex items-center gap-3 text-white/70">
-                    <PieChart className="h-5 w-5 text-indigo-400" />
-                    <span className="font-medium">Interactive Visualizations</span>
-                  </div>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 ml-12"
-                >
-                  <div className="flex items-center gap-3 text-white/70">
-                    <Sparkles className="h-5 w-5 text-indigo-400" />
-                    <span className="font-medium">AI-Powered Insights</span>
-                  </div>
-                </motion.div>
+              <div className="relative max-w-md mx-auto lg:mx-0">
+                <div className="absolute top-0 -left-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
+                <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
+                <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
+                
+                <div className="relative space-y-4">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10"
+                  >
+                    <div className="flex items-center gap-3 text-white/70">
+                      <LineChart className="h-5 w-5 text-indigo-400" />
+                      <span className="font-medium">Advanced Analytics</span>
+                    </div>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 ml-6"
+                  >
+                    <div className="flex items-center gap-3 text-white/70">
+                      <PieChart className="h-5 w-5 text-indigo-400" />
+                      <span className="font-medium">Interactive Visualizations</span>
+                    </div>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 ml-12"
+                  >
+                    <div className="flex items-center gap-3 text-white/70">
+                      <Sparkles className="h-5 w-5 text-indigo-400" />
+                      <span className="font-medium">AI-Powered Insights</span>
+                    </div>
+                  </motion.div>
+                </div>
               </div>
             </motion.div>
           </motion.div>
