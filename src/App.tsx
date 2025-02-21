@@ -1,42 +1,112 @@
-import React from 'react';
+import React, { ReactNode, useState } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { DataSummary } from './components/DataSummary';
 import { DefaultVisualizations } from './components/DefaultVisualizations';
 import { DataTable } from './components/DataTable';
 import { DataChat } from './components/DataChat';
 import { useDataStore } from './store/dataStore';
-import { BarChart2, Table2 } from 'lucide-react';
+import { BarChart2, Table2, Sparkles, ArrowRight, Download, Share2, FileText, Settings, HelpCircle } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Menu, MenuItem, HoveredLink } from './components/ui/navbar-menu';
+
+interface PremiumButtonProps {
+  children: ReactNode;
+  onClick?: () => void;
+  className?: string;
+}
+
+const PremiumButton: React.FC<PremiumButtonProps> = ({ 
+  children, 
+  onClick = () => {}, 
+  className = "" 
+}) => (
+  <button 
+    onClick={onClick}
+    className={`bg-slate-800 no-underline group cursor-pointer relative shadow-2xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-white inline-block ${className}`}
+  >
+    <span className="absolute inset-0 overflow-hidden rounded-full">
+      <span className="absolute inset-0 rounded-full bg-[image:radial-gradient(75%_100%_at_50%_0%,rgba(56,189,248,0.6)_0%,rgba(56,189,248,0)_75%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+    </span>
+    <div className="relative flex space-x-2 items-center z-10 rounded-full bg-zinc-950 py-0.5 px-4 ring-1 ring-white/10">
+      <span>{children}</span>
+      <ArrowRight className="h-4 w-4" />
+    </div>
+    <span className="absolute -bottom-0 left-[1.125rem] h-px w-[calc(100%-2.25rem)] bg-gradient-to-r from-emerald-400/0 via-emerald-400/90 to-emerald-400/0 transition-opacity duration-500 group-hover:opacity-40" />
+  </button>
+);
 
 function App() {
   const processedData = useDataStore(state => state.processedData);
+  const [active, setActive] = useState<string | null>(null);
 
   if (!processedData) {
     return <LandingPage />;
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0118]">
+    <div className="min-h-screen bg-[#0a0118] relative">
+      {/* Gradient Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className="absolute top-0 -left-4 w-[500px] h-[500px] bg-purple-500/30 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
+        <div className="absolute top-0 -right-4 w-[500px] h-[500px] bg-indigo-500/30 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-8 left-20 w-[500px] h-[500px] bg-pink-500/30 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-indigo-500/10 bg-[#0a0118]/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart2 className="h-6 w-6 text-indigo-500" />
-            <h1 className="font-bold text-xl bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">
+      <header className="sticky top-0 z-50 border-b border-white/[0.2] bg-black/50 backdrop-blur-xl">
+        <nav className="container flex h-16 items-center justify-between">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-2"
+          >
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/50 to-purple-500/50 rounded-full blur opacity-40 group-hover:opacity-75 transition" />
+              <BarChart2 className="h-6 w-6 relative text-white/90" />
+            </div>
+            <h1 className="font-bold text-xl text-white/90">
               DataAnalytics
             </h1>
+          </motion.div>
+          <div className="flex-1 flex justify-center">
+            <Menu setActive={setActive}>
+              <MenuItem setActive={setActive} active={active} item="Analysis">
+                <div className="flex flex-col space-y-4 text-sm">
+                  <HoveredLink href="#"><FileText className="w-4 h-4 inline-block mr-2" />Data Overview</HoveredLink>
+                  <HoveredLink href="#"><BarChart2 className="w-4 h-4 inline-block mr-2" />Visualizations</HoveredLink>
+                  <HoveredLink href="#"><Table2 className="w-4 h-4 inline-block mr-2" />Data Table</HoveredLink>
+                </div>
+              </MenuItem>
+              <MenuItem setActive={setActive} active={active} item="Settings">
+                <div className="flex flex-col space-y-4 text-sm">
+                  <HoveredLink href="#"><Settings className="w-4 h-4 inline-block mr-2" />Preferences</HoveredLink>
+                  <HoveredLink href="#"><Download className="w-4 h-4 inline-block mr-2" />Export Data</HoveredLink>
+                  <HoveredLink href="#"><Share2 className="w-4 h-4 inline-block mr-2" />Share</HoveredLink>
+                </div>
+              </MenuItem>
+              <MenuItem setActive={setActive} active={active} item="Help">
+                <div className="flex flex-col space-y-4 text-sm">
+                  <HoveredLink href="#"><HelpCircle className="w-4 h-4 inline-block mr-2" />Documentation</HoveredLink>
+                  <HoveredLink href="#"><Sparkles className="w-4 h-4 inline-block mr-2" />AI Assistant</HoveredLink>
+                </div>
+              </MenuItem>
+            </Menu>
           </div>
-          <FileUpload />
-        </div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3"
+          >
+            <FileUpload />
+          </motion.div>
+        </nav>
       </header>
 
       {/* Hero Section */}
-      <div className="relative border-b border-indigo-500/10 bg-[#0a0118] overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
-        </div>
-        
+      <div className="relative border-b border-white/[0.2] bg-black/40 backdrop-blur-sm">
         <div className="container relative py-12">
           <DataSummary />
         </div>
@@ -45,31 +115,76 @@ function App() {
       <main className="container py-8 space-y-8">
         {/* Analytics Dashboard */}
         <div className="space-y-8">
-          {/* Default Visualizations */}
-          <DefaultVisualizations />
-
-          {/* Data Preview */}
-          <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-white">Data Preview</h3>
-                <p className="text-sm text-white/50">Browse and search through your dataset</p>
+          <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    Analytics Dashboard
+                    <Sparkles className="h-5 w-5 text-indigo-400" />
+                  </CardTitle>
+                  <CardDescription>
+                    Comprehensive analysis and visualization of your data
+                  </CardDescription>
+                </div>
+                <div className="flex gap-3">
+                  <PremiumButton>View All Charts</PremiumButton>
+                  <PremiumButton>Customize View</PremiumButton>
+                </div>
               </div>
-              <Table2 className="h-5 w-5 text-indigo-400" />
-            </div>
-            <DataTable />
-          </div>
+            </CardHeader>
+            <CardContent>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <DefaultVisualizations />
+              </motion.div>
+            </CardContent>
+          </Card>
+
+          {/* Data Preview Section */}
+          <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2">
+                    Data Preview
+                    <Table2 className="h-5 w-5 text-indigo-400" />
+                  </CardTitle>
+                  <CardDescription>
+                    Browse and search through your dataset
+                  </CardDescription>
+                </div>
+                <div className="flex gap-3">
+                  <PremiumButton>Filter Data</PremiumButton>
+                  <PremiumButton>Download CSV</PremiumButton>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <DataTable />
+            </CardContent>
+          </Card>
         </div>
       </main>
 
       {/* Floating Chat Button */}
       <DataChat />
 
-      <footer className="border-t border-indigo-500/10 py-6 bg-[#0a0118]/50 backdrop-blur-xl">
-        <div className="container flex justify-between items-center">
-          <p className="text-sm text-white/50">
-            © 2024 DataAnalytics. All rights reserved.
-          </p>
+      <footer className="border-t border-white/[0.2] py-6 bg-black/40 backdrop-blur-sm mt-8">
+        <div className="container">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-white/50">
+              © 2024 DataAnalytics. All rights reserved.
+            </p>
+            <div className="flex items-center gap-6">
+              <a href="#" className="text-sm text-white/50 hover:text-white/80 transition-colors">Privacy Policy</a>
+              <a href="#" className="text-sm text-white/50 hover:text-white/80 transition-colors">Terms of Service</a>
+              <a href="#" className="text-sm text-white/50 hover:text-white/80 transition-colors">Documentation</a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
