@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { useDataStore } from '../store/dataStore';
 import { mean, median, deviation, extent, quantile, bin } from 'd3-array';
@@ -9,8 +9,12 @@ import {
   Activity, 
   ScatterChart, 
   BoxPlot,
-  ArrowUpDown
+  ArrowUpDown,
+  HelpCircle,
+  Loader2
 } from 'lucide-react';
+import { getChatCompletion } from '../services/groq';
+import { AIExplanationModal } from './AIExplanationModal';
 
 const COLORS = [
   '#6366f1', // indigo-500
@@ -26,20 +30,47 @@ interface ChartCardProps {
   description: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  onExplain: () => void;
+  isExplaining: boolean;
 }
 
-const ChartCard: React.FC<ChartCardProps> = ({ title, description, icon, children }) => (
-  <div className="flex flex-col h-full rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg overflow-hidden">
+const ChartCard: React.FC<ChartCardProps> = ({ 
+  title, 
+  description, 
+  icon, 
+  children,
+  onExplain,
+  isExplaining
+}) => (
+  <div className="flex flex-col h-full rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg relative">
     <div className="flex items-center justify-between p-6 border-b border-indigo-500/10">
       <div className="space-y-1.5">
         <h3 className="text-lg font-semibold text-white/90">{title}</h3>
         <p className="text-sm text-white/50 leading-tight">{description}</p>
       </div>
-      <div className="flex-shrink-0">
-        {icon}
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <button
+            onClick={onExplain}
+            disabled={isExplaining}
+            className="relative group z-20"
+          >
+            {isExplaining ? (
+              <Loader2 className="h-5 w-5 text-indigo-400 animate-spin" />
+            ) : (
+              <HelpCircle className="h-5 w-5 text-indigo-400/50 hover:text-indigo-400 transition-colors" />
+            )}
+            <span className="absolute top-0 left-full ml-2 px-4 py-2 bg-black/80 backdrop-blur-sm rounded text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
+              Explain with AI
+            </span>
+          </button>
+        </div>
+        <div className="flex-shrink-0">
+          {icon}
+        </div>
       </div>
     </div>
-    <div className="flex-1 p-6 pt-4">
+    <div className="flex-1 p-6 pt-4 overflow-hidden">
       {children}
     </div>
   </div>
@@ -79,14 +110,102 @@ const detectTimeColumn = (headers: string[], rows: any[]) => {
   });
 
   const bestMatch = dateScores.reduce((best, current) => 
-    current.score > best.score ? current : best
-  , { header: '', score: 0 });
+    current.score > best.score ? current : best,
+    { header: '', score: 0 }
+  );
 
   return bestMatch.score > 0.8 ? bestMatch.header : null;
 };
 
 export const DefaultVisualizations: React.FC = () => {
   const processedData = useDataStore(state => state.processedData);
+  const [explaining, setExplaining] = useState<Record<string, boolean>>({});
+  const [modalOpen, setModalOpen] = useState(false);
+  const [explanation, setExplanation] = useState('');
+
+  const handleExplain = async (chartType: string, data: any) => {
+    setExplaining(prev => ({ ...prev, [chartType]: true }));
+    
+    try {
+      let prompt = '';
+      switch (chartType) {
+        case 'distribution':
+          prompt = `Analyze this distribution data for the column "${data.primaryColumn}". Key statistics:
+
+**Mean**: ${data.stats.mean.toFixed(2)}
+**Median**: ${data.stats.median.toFixed(2)}
+**Standard Deviation**: ${data.stats.stdDev.toFixed(2)}
+
+Please provide insights about:
+1. The shape of the distribution
+2. Any skewness or unusual patterns
+3. The spread of the data
+4. Practical implications of these statistics`;
+          break;
+        case 'timeSeries':
+          prompt = `Analyze the time series trend for "${data.primaryColumn}". Please provide insights about:
+
+1. Overall trend direction
+2. Any seasonal patterns
+3. Notable peaks or valleys
+4. Rate of change
+5. Any anomalies or unusual patterns`;
+          break;
+        case 'category':
+          prompt = `Analyze the category distribution shown in the bar chart. Please provide insights about:
+
+1. The most frequent categories
+2. Distribution patterns
+3. Any notable imbalances
+4. Potential implications of this distribution`;
+          break;
+        case 'correlation':
+          prompt = `Analyze the correlation between the variables shown in the scatter plot. Please provide insights about:
+
+1. The type of relationship (positive, negative, or none)
+2. The strength of the relationship
+3. Any notable patterns or clusters
+4. Potential outliers
+5. Practical implications of this relationship`;
+          break;
+        case 'proportion':
+          prompt = `Analyze the proportional distribution shown in the pie chart. Please provide insights about:
+
+1. Dominant segments
+2. Balance between categories
+3. Any notable patterns
+4. Business or practical implications`;
+          break;
+        case 'outlier':
+          prompt = `Analyze the box plot for outliers in "${data.primaryColumn}". Please provide insights about:
+
+1. The overall spread of the data
+2. The presence and significance of outliers
+3. The symmetry of the distribution
+4. Any unusual patterns
+5. Practical implications of these outliers`;
+          break;
+      }
+
+      let chunks = '';
+      await getChatCompletion(
+        prompt,
+        `This is a data analysis task. The data being analyzed is from a CSV file with ${processedData?.summary.rowCount} rows and ${processedData?.summary.columnCount} columns.`,
+        (chunk) => {
+          chunks += chunk;
+        }
+      );
+
+      setExplanation(chunks);
+      setModalOpen(true);
+    } catch (error) {
+      console.error('Error getting AI explanation:', error);
+      setExplanation('Sorry, I encountered an error while analyzing this chart. Please try again.');
+      setModalOpen(true);
+    } finally {
+      setExplaining(prev => ({ ...prev, [chartType]: false }));
+    }
+  };
 
   const defaultConfig = useMemo(() => ({
     displayModeBar: false,
@@ -161,13 +280,12 @@ export const DefaultVisualizations: React.FC = () => {
         processedData.rows.reduce((acc, row) => {
           const cat = String(row[categoryColumn] || 'Unknown');
           if (!acc[cat]) acc[cat] = 0;
-          // Count occurrences instead of summing values
           acc[cat]++;
           return acc;
         }, {} as Record<string, number>)
       )
-      .sort((a, b) => b[1] - a[1]) // Sort by frequency
-      .slice(0, 10) // Take top 10 categories
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
     : null;
 
     // Correlation data
@@ -190,185 +308,205 @@ export const DefaultVisualizations: React.FC = () => {
   if (!chartData) return null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
-      {/* Distribution Analysis */}
-      <ChartCard
-        title="Distribution Analysis"
-        description="Statistical distribution and density"
-        icon={<Activity className="h-5 w-5 text-indigo-400" />}
-      >
-        <Plot
-          data={[{
-            type: 'violin',
-            x: chartData.values,
-            name: chartData.primaryColumn,
-            box: { visible: true },
-            meanline: { visible: true },
-            line: { color: COLORS[0] },
-          }]}
-          layout={{ ...defaultLayout }}
-          config={defaultConfig}
-          style={{ width: '100%', height: '100%' }}
-          useResizeHandler
-        />
-      </ChartCard>
-
-      {/* Time Series Analysis */}
-      <ChartCard
-        title="Time Series Analysis"
-        description="Trends over time"
-        icon={<LineChart className="h-5 w-5 text-indigo-400" />}
-      >
-        {chartData.timeSeriesData ? (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
+        {/* Distribution Analysis */}
+        <ChartCard
+          title="Distribution Analysis"
+          description="Statistical distribution and density"
+          icon={<Activity className="h-5 w-5 text-indigo-400" />}
+          onExplain={() => handleExplain('distribution', chartData)}
+          isExplaining={explaining['distribution']}
+        >
           <Plot
             data={[{
-              type: 'scatter',
-              mode: 'lines',
-              x: chartData.timeSeriesData.map(d => d.x),
-              y: chartData.timeSeriesData.map(d => d.y),
-              line: { 
-                color: COLORS[1],
-                shape: 'spline',
-                smoothing: 0.3,
-              },
-            }]}
-            layout={{
-              ...defaultLayout,
-              xaxis: {
-                ...defaultLayout.xaxis,
-                type: 'date',
-                tickformat: '%Y-%m-%d',
-                nticks: 10,
-              },
-            }}
-            config={{
-              ...defaultConfig,
-              displayModeBar: true,
-              modeBarButtonsToAdd: ['zoom2d', 'pan2d', 'resetScale2d'],
-            }}
-            style={{ width: '100%', height: '100%' }}
-            useResizeHandler
-          />
-        ) : (
-          <div className="h-[300px] flex items-center justify-center text-white/50">
-            No time series data available
-          </div>
-        )}
-      </ChartCard>
-
-      {/* Category Comparison */}
-      <ChartCard
-        title="Category Comparison"
-        description="Distribution of categories"
-        icon={<BarChart2 className="h-5 w-5 text-indigo-400" />}
-      >
-        {chartData.categoryData ? (
-          <Plot
-            data={[{
-              type: 'bar',
-              x: chartData.categoryData.map(([cat]) => cat),
-              y: chartData.categoryData.map(([, count]) => count),
-              marker: { color: COLORS[2] },
-              text: chartData.categoryData.map(([, count]) => count),
-              textposition: 'auto',
-            }]}
-            layout={{
-              ...defaultLayout,
-              barmode: 'group',
-              xaxis: {
-                ...defaultLayout.xaxis,
-                tickangle: -45,
-                title: processedData?.summary.categoricalColumns[0] || '',
-              },
-              yaxis: {
-                ...defaultLayout.yaxis,
-                title: 'Count',
-              },
-            }}
-            config={defaultConfig}
-            style={{ width: '100%', height: '100%' }}
-            useResizeHandler
-          />
-        ) : (
-          <div className="h-[300px] flex items-center justify-center text-white/50">
-            No categorical data available
-          </div>
-        )}
-      </ChartCard>
-
-      {/* Correlation Analysis */}
-      <ChartCard
-        title="Correlation Analysis"
-        description="Relationship between variables"
-        icon={<ScatterChart className="h-5 w-5 text-indigo-400" />}
-      >
-        {chartData.correlationData ? (
-          <Plot
-            data={[{
-              type: 'scatter',
-              mode: 'markers',
-              x: chartData.correlationData.x,
-              y: chartData.correlationData.y,
-              marker: { color: COLORS[3] },
+              type: 'violin',
+              x: chartData.values,
+              name: chartData.primaryColumn,
+              box: { visible: true },
+              meanline: { visible: true },
+              line: { color: COLORS[0] },
             }]}
             layout={{ ...defaultLayout }}
             config={defaultConfig}
             style={{ width: '100%', height: '100%' }}
             useResizeHandler
           />
-        ) : (
-          <div className="h-[300px] flex items-center justify-center text-white/50">
-            Insufficient numerical columns for correlation
-          </div>
-        )}
-      </ChartCard>
+        </ChartCard>
 
-      {/* Proportional Analysis */}
-      <ChartCard
-        title="Proportional Analysis"
-        description="Distribution across categories"
-        icon={<PieChart className="h-5 w-5 text-indigo-400" />}
-      >
-        {chartData.categoryData ? (
+        {/* Time Series Analysis */}
+        <ChartCard
+          title="Time Series Analysis"
+          description="Trends over time"
+          icon={<LineChart className="h-5 w-5 text-indigo-400" />}
+          onExplain={() => handleExplain('timeSeries', chartData)}
+          isExplaining={explaining['timeSeries']}
+        >
+          {chartData.timeSeriesData ? (
+            <Plot
+              data={[{
+                type: 'scatter',
+                mode: 'lines',
+                x: chartData.timeSeriesData.map(d => d.x),
+                y: chartData.timeSeriesData.map(d => d.y),
+                line: { 
+                  color: COLORS[1],
+                  shape: 'spline',
+                  smoothing: 0.3,
+                }
+              }]}
+              layout={{
+                ...defaultLayout,
+                xaxis: {
+                  ...defaultLayout.xaxis,
+                  type: 'date',
+                  tickformat: '%Y-%m-%d',
+                  nticks: 10
+                }
+              }}
+              config={{
+                ...defaultConfig,
+                displayModeBar: true,
+                modeBarButtonsToAdd: ['zoom2d', 'pan2d', 'resetScale2d']
+              }}
+              style={{ width: '100%', height: '100%' }}
+              useResizeHandler
+            />
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-white/50">
+              No time series data available
+            </div>
+          )}
+        </ChartCard>
+
+        {/* Category Comparison */}
+        <ChartCard
+          title="Category Comparison"
+          description="Distribution of categories"
+          icon={<BarChart2 className="h-5 w-5 text-indigo-400" />}
+          onExplain={() => handleExplain('category', chartData)}
+          isExplaining={explaining['category']}
+        >
+          {chartData.categoryData ? (
+            <Plot
+              data={[{
+                type: 'bar',
+                x: chartData.categoryData.map(([cat]) => cat),
+                y: chartData.categoryData.map(([, count]) => count),
+                marker: { color: COLORS[2] },
+                text: chartData.categoryData.map(([, count]) => count),
+                textposition: 'auto',
+              }]}
+              layout={{
+                ...defaultLayout,
+                barmode: 'group',
+                xaxis: {
+                  ...defaultLayout.xaxis,
+                  tickangle: -45,
+                  title: processedData?.summary.categoricalColumns[0] || '',
+                },
+                yaxis: {
+                  ...defaultLayout.yaxis,
+                  title: 'Count',
+                },
+              }}
+              config={defaultConfig}
+              style={{ width: '100%', height: '100%' }}
+              useResizeHandler
+            />
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-white/50">
+              No categorical data available
+            </div>
+          )}
+        </ChartCard>
+
+        {/* Correlation Analysis */}
+        <ChartCard
+          title="Correlation Analysis"
+          description="Relationship between variables"
+          icon={<ScatterChart className="h-5 w-5 text-indigo-400" />}
+          onExplain={() => handleExplain('correlation', chartData)}
+          isExplaining={explaining['correlation']}
+        >
+          {chartData.correlationData ? (
+            <Plot
+              data={[{
+                type: 'scatter',
+                mode: 'markers',
+                x: chartData.correlationData.x,
+                y: chartData.correlationData.y,
+                marker: { color: COLORS[3] },
+              }]}
+              layout={{ ...defaultLayout }}
+              config={defaultConfig}
+              style={{ width: '100%', height: '100%' }}
+              useResizeHandler
+            />
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-white/50">
+              Insufficient numerical columns for correlation
+            </div>
+          )}
+        </ChartCard>
+
+        {/* Proportional Analysis */}
+        <ChartCard
+          title="Proportional Analysis"
+          description="Distribution across categories"
+          icon={<PieChart className="h-5 w-5 text-indigo-400" />}
+          onExplain={() => handleExplain('proportion', chartData)}
+          isExplaining={explaining['proportion']}
+        >
+          {chartData.categoryData ? (
+            <Plot
+              data={[{
+                type: 'pie',
+                labels: chartData.categoryData.map(([cat]) => cat),
+                values: chartData.categoryData.map(([, val]) => val),
+                marker: { colors: COLORS },
+              }]}
+              layout={{ ...defaultLayout }}
+              config={defaultConfig}
+              style={{ width: '100%', height: '100%' }}
+              useResizeHandler
+            />
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-white/50">
+              No categorical data available
+            </div>
+          )}
+        </ChartCard>
+
+        {/* Outlier Detection */}
+        <ChartCard
+          title="Outlier Detection"
+          description="Identify anomalies in data"
+          icon={<ArrowUpDown className="h-5 w-5 text-indigo-400" />}
+          onExplain={() => handleExplain('outlier', chartData)}
+          isExplaining={explaining['outlier']}
+        >
           <Plot
             data={[{
-              type: 'pie',
-              labels: chartData.categoryData.map(([cat]) => cat),
-              values: chartData.categoryData.map(([, val]) => val),
-              marker: { colors: COLORS },
+              type: 'box',
+              y: chartData.values,
+              name: chartData.primaryColumn,
+              boxpoints: 'outliers',
+              marker: { color: COLORS[5] },
             }]}
             layout={{ ...defaultLayout }}
             config={defaultConfig}
             style={{ width: '100%', height: '100%' }}
             useResizeHandler
           />
-        ) : (
-          <div className="h-[300px] flex items-center justify-center text-white/50">
-            No categorical data available
-          </div>
-        )}
-      </ChartCard>
-
-      {/* Outlier Detection */}
-      <ChartCard
-        title="Outlier Detection"
-        description="Identify anomalies in data"
-        icon={<ArrowUpDown className="h-5 w-5 text-indigo-400" />}
-      >
-        <Plot
-          data={[{
-            type: 'box',
-            y: chartData.values,
-            name: chartData.primaryColumn,
-            boxpoints: 'outliers',
-            marker: { color: COLORS[5] },
-          }]}
-          layout={{ ...defaultLayout }}
-          config={defaultConfig}
-          style={{ width: '100%', height: '100%' }}
-          useResizeHandler
-        />
-      </ChartCard>
-    </div>
+        </ChartCard>
+      </div>
+      
+      <AIExplanationModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        content={explanation}
+      />
+    </>
   );
-}; 
+};
