@@ -33,7 +33,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon: Icon, label, value, delay }) 
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
   >
-    <Card>
+    <Card className="border-white/[0.2] bg-black/40 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{label}</CardTitle>
         <Icon className="h-4 w-4 text-purple-400" />
@@ -108,7 +108,7 @@ export const DataSummary: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <Card>
+        <Card className="border-white/[0.2] bg-black/40 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">

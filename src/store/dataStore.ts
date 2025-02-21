@@ -24,15 +24,30 @@ interface ProcessedData {
   summary: DataSummary;
 }
 
+interface DataTransformation {
+  type: string;
+  description: string;
+  timestamp: Date;
+  data: ProcessedData;
+}
+
 interface DataStore {
   rawData: Record<string, string | number | null>[] | null;
   processedData: ProcessedData | null;
   filterValue: string;
   selectedColumns: string[];
+  transformationHistory: DataTransformation[];
+  currentHistoryIndex: number;
+  isProcessing: boolean;
+  error: string | null;
   setRawData: (data: Record<string, string | number | null>[]) => void;
   setFilterValue: (value: string) => void;
   setSelectedColumns: (columns: string[]) => void;
   getFilteredData: () => Record<string, string | number | null>[];
+  updateData: (rows: Record<string, string | number | null>[], headers?: string[]) => void;
+  undoTransformation: () => void;
+  redoTransformation: () => void;
+  resetError: () => void;
 }
 
 const processData = (
@@ -119,20 +134,48 @@ export const useDataStore = create<DataStore>((set, get) => ({
   processedData: null,
   filterValue: "",
   selectedColumns: [],
+  transformationHistory: [],
+  currentHistoryIndex: -1,
+  isProcessing: false,
+  error: null,
   setRawData: (data) => {
     if (!data || data.length === 0) {
-      set({ rawData: null, processedData: null, selectedColumns: [] });
+      set({ 
+        rawData: null, 
+        processedData: null, 
+        selectedColumns: [],
+        transformationHistory: [],
+        currentHistoryIndex: -1,
+        error: null 
+      });
       return;
     }
 
-    // Process data asynchronously to prevent blocking the UI
+    set({ isProcessing: true, error: null });
+
     Promise.resolve().then(() => {
-      const processed = processData(data);
-      if (processed) {
-        set({
-          rawData: data,
-          processedData: processed,
-          selectedColumns: processed.headers,
+      try {
+        const processed = processData(data);
+        if (processed) {
+          set({
+            rawData: data,
+            processedData: processed,
+            selectedColumns: processed.headers,
+            transformationHistory: [{
+              type: 'initial',
+              description: 'Initial data load',
+              timestamp: new Date(),
+              data: processed
+            }],
+            currentHistoryIndex: 0,
+            isProcessing: false,
+            error: null
+          });
+        }
+      } catch (error) {
+        set({ 
+          isProcessing: false, 
+          error: error instanceof Error ? error.message : 'Error processing data' 
         });
       }
     });
@@ -141,7 +184,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   setSelectedColumns: (columns) => set({ selectedColumns: columns }),
   getFilteredData: () => {
     const { processedData, filterValue, selectedColumns } = get();
-    if (!processedData) return [];
+    if (!processedData?.rows) return [];
 
     const searchTerms = filterValue
       .toLowerCase()
@@ -159,4 +202,60 @@ export const useDataStore = create<DataStore>((set, get) => ({
       )
     );
   },
+  updateData: (rows, headers) => {
+    const { processedData, transformationHistory, currentHistoryIndex } = get();
+    if (!processedData) return;
+
+    try {
+      const newProcessedData = processData(rows);
+      if (!newProcessedData) return;
+
+      if (headers) {
+        newProcessedData.headers = headers;
+      }
+
+      // Truncate future history if we're not at the latest state
+      const newHistory = transformationHistory.slice(0, currentHistoryIndex + 1);
+      newHistory.push({
+        type: 'update',
+        description: 'Data transformation applied',
+        timestamp: new Date(),
+        data: newProcessedData
+      });
+
+      set({
+        processedData: newProcessedData,
+        transformationHistory: newHistory,
+        currentHistoryIndex: newHistory.length - 1,
+        error: null
+      });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Error updating data' 
+      });
+    }
+  },
+  undoTransformation: () => {
+    const { transformationHistory, currentHistoryIndex } = get();
+    if (currentHistoryIndex <= 0) return;
+
+    const previousState = transformationHistory[currentHistoryIndex - 1];
+    set({
+      processedData: previousState.data,
+      currentHistoryIndex: currentHistoryIndex - 1,
+      error: null
+    });
+  },
+  redoTransformation: () => {
+    const { transformationHistory, currentHistoryIndex } = get();
+    if (currentHistoryIndex >= transformationHistory.length - 1) return;
+
+    const nextState = transformationHistory[currentHistoryIndex + 1];
+    set({
+      processedData: nextState.data,
+      currentHistoryIndex: currentHistoryIndex + 1,
+      error: null
+    });
+  },
+  resetError: () => set({ error: null })
 }));

@@ -5,12 +5,13 @@ import { DefaultVisualizations } from './components/DefaultVisualizations';
 import { DataTable } from './components/DataTable';
 import { DataChat } from './components/DataChat';
 import { useDataStore } from './store/dataStore';
-import { BarChart2, Table2, Sparkles, ArrowRight, Download, Share2, FileText, Settings, HelpCircle } from 'lucide-react';
+import { BarChart2, Table2, Sparkles, ArrowRight, Download, Share2, FileText, Settings, HelpCircle, Calculator } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Menu, MenuItem, HoveredLink } from './components/ui/navbar-menu';
 import { saveAs } from 'file-saver';
+import { DataTransformations } from './components/DataTransformations';
 
 interface PremiumButtonProps {
   children: ReactNode;
@@ -96,13 +97,25 @@ function App() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-2"
           >
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/50 to-purple-500/50 rounded-full blur opacity-40 group-hover:opacity-75 transition" />
-              <BarChart2 className="h-6 w-6 relative text-white/90" />
-            </div>
-            <h1 className="font-bold text-xl text-white/90">
-              DataAnalytics
-            </h1>
+            <button 
+              onClick={() => useDataStore.setState({ 
+                rawData: null, 
+                processedData: null, 
+                selectedColumns: [], 
+                transformationHistory: [], 
+                currentHistoryIndex: -1, 
+                error: null 
+              })}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/50 to-purple-500/50 rounded-full blur opacity-40 group-hover:opacity-75 transition" />
+                <BarChart2 className="h-6 w-6 relative text-white/90" />
+              </div>
+              <h1 className="font-bold text-xl text-white/90">
+                DataAnalytics
+              </h1>
+            </button>
           </motion.div>
           <div className="flex-1 flex justify-center">
             <Menu setActive={setActive}>
@@ -152,6 +165,32 @@ function App() {
       </div>
 
       <main className="container py-8 space-y-8">
+        {/* Data Manipulation Section */}
+        <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  Data Transformations
+                  <Calculator className="h-5 w-5 text-indigo-400" />
+                </CardTitle>
+                <CardDescription>
+                  Transform and manipulate your data with powerful tools
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <DataTransformations />
+            </motion.div>
+          </CardContent>
+        </Card>
+
         {/* Analytics Dashboard */}
         <div id="analytics-dashboard" className="space-y-8">
           <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
