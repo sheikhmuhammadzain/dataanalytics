@@ -8,45 +8,38 @@ export const DataTable: React.FC = () => {
   if (!processedData) return null;
 
   return (
-    <div className="rounded-lg border">
-      <div className="relative w-full overflow-auto">
-        <table className="w-full caption-bottom text-sm">
-          <thead className="[&_tr]:border-b">
-            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-              {processedData.headers.map((header) => (
-                <th
-                  key={header}
-                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+    <div className="overflow-x-auto rounded-lg border border-indigo-500/10">
+      <table className="w-full min-w-full divide-y divide-indigo-500/10">
+        <thead className="bg-indigo-500/5">
+          <tr>
+            {processedData.headers.map((header, index) => (
+              <th
+                key={index}
+                className="px-6 py-4 text-left text-sm font-semibold text-white/90 whitespace-nowrap"
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-indigo-500/10">
+          {filteredData.slice(0, 100).map((row, rowIndex) => (
+            <tr 
+              key={rowIndex}
+              className="hover:bg-indigo-500/5 transition-colors"
+            >
+              {processedData.headers.map((header, colIndex) => (
+                <td
+                  key={`${rowIndex}-${colIndex}`}
+                  className="px-6 py-4 text-sm text-white/70 whitespace-nowrap"
                 >
-                  {header}
-                </th>
+                  {row[header] === null || row[header] === undefined ? '-' : String(row[header])}
+                </td>
               ))}
             </tr>
-          </thead>
-          <tbody className="[&_tr:last-child]:border-0">
-            {filteredData.slice(0, 100).map((row, idx) => (
-              <tr
-                key={idx}
-                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-              >
-                {processedData.headers.map((header) => (
-                  <td
-                    key={header}
-                    className="p-4 align-middle [&:has([role=checkbox])]:pr-0"
-                  >
-                    {row[header] === null || row[header] === undefined ? '-' : String(row[header])}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {filteredData.length > 100 && (
-        <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
-          Showing first 100 rows of {filteredData.length} total rows
-        </div>
-      )}
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

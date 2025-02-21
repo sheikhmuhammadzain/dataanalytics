@@ -11,22 +11,28 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.30.0",
     "@types/plotly.js": "^2.35.2",
     "@visx/group": "^3.12.0",
     "@visx/scale": "^3.12.0",
     "@visx/stats": "^3.12.0",
     "@visx/visx": "^3.12.0",
+    "clsx": "^2.1.1",
     "d3-array": "^3.2.4",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
+    "framer-motion": "^12.4.7",
     "groq-sdk": "^0.3.1",
+    "icons-react": "^3.7.1",
     "lucide-react": "^0.344.0",
     "papaparse": "^5.4.1",
     "plotly.js-dist-min": "^3.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-dropzone": "^14.3.5",
     "react-plotly.js": "^2.6.0",
     "recharts": "^2.12.2",
+    "tailwind-merge": "^3.0.1",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

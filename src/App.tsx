@@ -1,11 +1,11 @@
 import React from 'react';
 import { FileUpload } from './components/FileUpload';
 import { DataSummary } from './components/DataSummary';
-import { DataVisualizations } from './components/DataVisualizations';
+import { DefaultVisualizations } from './components/DefaultVisualizations';
 import { DataTable } from './components/DataTable';
 import { DataChat } from './components/DataChat';
 import { useDataStore } from './store/dataStore';
-import { BarChart2, LineChart, Bot, Table2, ArrowRight } from 'lucide-react';
+import { BarChart2, Table2 } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 
 function App() {
@@ -23,7 +23,7 @@ function App() {
           <div className="flex items-center gap-2">
             <BarChart2 className="h-6 w-6 text-indigo-500" />
             <h1 className="font-bold text-xl bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">
-              AwaisAnalytics
+              DataAnalytics
             </h1>
           </div>
           <FileUpload />
@@ -44,49 +44,9 @@ function App() {
 
       <main className="container py-8 space-y-8">
         {/* Analytics Dashboard */}
-        <div className="grid gap-6">
+        <div className="space-y-8">
           {/* Default Visualizations */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-white">Distribution Analysis</h3>
-                  <p className="text-sm text-white/50">Analyze the distribution of numerical variables</p>
-                </div>
-                <button className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors text-sm">
-                  View Details
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              <DataVisualizations defaultView="distribution" />
-            </div>
-
-            <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-white">Correlation Analysis</h3>
-                  <p className="text-sm text-white/50">Explore relationships between variables</p>
-                </div>
-                <button className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors text-sm">
-                  View Details
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              <DataVisualizations defaultView="correlation" />
-            </div>
-          </div>
-
-          {/* AI Chat */}
-          <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-white">AI Chat Assistant</h3>
-                <p className="text-sm text-white/50">Get instant insights about your data</p>
-              </div>
-              <Bot className="h-5 w-5 text-indigo-400" />
-            </div>
-            <DataChat />
-          </div>
+          <DefaultVisualizations />
 
           {/* Data Preview */}
           <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
@@ -102,10 +62,13 @@ function App() {
         </div>
       </main>
 
+      {/* Floating Chat Button */}
+      <DataChat />
+
       <footer className="border-t border-indigo-500/10 py-6 bg-[#0a0118]/50 backdrop-blur-xl">
         <div className="container flex justify-between items-center">
           <p className="text-sm text-white/50">
-            © 2024 AwaisAnalytics. All rights reserved.
+            © 2024 DataAnalytics. All rights reserved.
           </p>
         </div>
       </footer>
