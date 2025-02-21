@@ -10,6 +10,7 @@ import { LandingPage } from './components/LandingPage';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Menu, MenuItem, HoveredLink } from './components/ui/navbar-menu';
+import { saveAs } from 'file-saver';
 
 interface PremiumButtonProps {
   children: ReactNode;
@@ -40,6 +41,38 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
 function App() {
   const processedData = useDataStore(state => state.processedData);
   const [active, setActive] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const handleScroll = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+    setActive(null);
+  };
+
+  const handleDownloadCSV = () => {
+    if (!processedData) return;
+
+    const headers = processedData.headers;
+    const rows = processedData.rows;
+
+    let csvContent = headers.join(',') + '\n';
+    rows.forEach(row => {
+      const rowData = headers.map(header => {
+        const value = row[header];
+        // Handle special characters and commas in the data
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value ?? '';
+      });
+      csvContent += rowData.join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, 'data_export.csv');
+  };
 
   if (!processedData) {
     return <LandingPage />;
@@ -75,9 +108,15 @@ function App() {
             <Menu setActive={setActive}>
               <MenuItem setActive={setActive} active={active} item="Analysis">
                 <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="#"><FileText className="w-4 h-4 inline-block mr-2" />Data Overview</HoveredLink>
-                  <HoveredLink href="#"><BarChart2 className="w-4 h-4 inline-block mr-2" />Visualizations</HoveredLink>
-                  <HoveredLink href="#"><Table2 className="w-4 h-4 inline-block mr-2" />Data Table</HoveredLink>
+                  <HoveredLink onClick={() => handleScroll('data-overview')}>
+                    <FileText className="w-4 h-4 inline-block mr-2" />Data Overview
+                  </HoveredLink>
+                  <HoveredLink onClick={() => handleScroll('analytics-dashboard')}>
+                    <BarChart2 className="w-4 h-4 inline-block mr-2" />Visualizations
+                  </HoveredLink>
+                  <HoveredLink onClick={() => handleScroll('data-preview')}>
+                    <Table2 className="w-4 h-4 inline-block mr-2" />Data Table
+                  </HoveredLink>
                 </div>
               </MenuItem>
               <MenuItem setActive={setActive} active={active} item="Settings">
@@ -106,7 +145,7 @@ function App() {
       </header>
 
       {/* Hero Section */}
-      <div className="relative border-b border-white/[0.2] bg-black/40 backdrop-blur-sm">
+      <div id="data-overview" className="relative border-b border-white/[0.2] bg-black/40 backdrop-blur-sm">
         <div className="container relative py-12">
           <DataSummary />
         </div>
@@ -114,7 +153,7 @@ function App() {
 
       <main className="container py-8 space-y-8">
         {/* Analytics Dashboard */}
-        <div className="space-y-8">
+        <div id="analytics-dashboard" className="space-y-8">
           <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -128,8 +167,12 @@ function App() {
                   </CardDescription>
                 </div>
                 <div className="flex gap-3">
-                  <PremiumButton>View All Charts</PremiumButton>
-                  <PremiumButton>Customize View</PremiumButton>
+                  <PremiumButton onClick={() => handleScroll('analytics-dashboard')}>
+                    View All Charts
+                  </PremiumButton>
+                  <PremiumButton onClick={() => setShowFilters(prev => !prev)}>
+                    Customize View
+                  </PremiumButton>
                 </div>
               </div>
             </CardHeader>
@@ -139,34 +182,40 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <DefaultVisualizations />
+                <DefaultVisualizations showFilters={showFilters} />
               </motion.div>
             </CardContent>
           </Card>
 
           {/* Data Preview Section */}
-          <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2">
-                    Data Preview
-                    <Table2 className="h-5 w-5 text-indigo-400" />
-                  </CardTitle>
-                  <CardDescription>
-                    Browse and search through your dataset
-                  </CardDescription>
+          <div id="data-preview">
+            <Card className="relative border-white/[0.2] bg-black/40 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2">
+                      Data Preview
+                      <Table2 className="h-5 w-5 text-indigo-400" />
+                    </CardTitle>
+                    <CardDescription>
+                      Browse and search through your dataset
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-3">
+                    <PremiumButton onClick={() => setShowFilters(prev => !prev)}>
+                      Filter Data
+                    </PremiumButton>
+                    <PremiumButton onClick={handleDownloadCSV}>
+                      Download CSV
+                    </PremiumButton>
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <PremiumButton>Filter Data</PremiumButton>
-                  <PremiumButton>Download CSV</PremiumButton>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <DataTable />
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <DataTable showFilters={showFilters} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import { useDataStore } from '../store/dataStore';
 import { mean, median, deviation, extent, quantile, bin } from 'd3-array';
@@ -120,11 +120,23 @@ const detectTimeColumn = (headers: string[], rows: any[]) => {
   return bestMatch.score > 0.8 ? bestMatch.header : null;
 };
 
-export const DefaultVisualizations: React.FC = () => {
+interface DefaultVisualizationsProps {
+  showFilters: boolean;
+}
+
+export const DefaultVisualizations: React.FC<DefaultVisualizationsProps> = ({ showFilters }) => {
   const processedData = useDataStore(state => state.processedData);
+  const [selectedChart, setSelectedChart] = useState<string>('distribution');
+  const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [explaining, setExplaining] = useState<Record<string, boolean>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [explanation, setExplanation] = useState('');
+
+  useEffect(() => {
+    if (processedData?.summary?.numericalColumns.length) {
+      setSelectedColumn(processedData.summary.numericalColumns[0]);
+    }
+  }, [processedData]);
 
   const handleExplain = async (chartType: string, data: any) => {
     setExplaining(prev => ({ ...prev, [chartType]: true }));
@@ -311,7 +323,38 @@ Please provide insights about:
   if (!chartData) return null;
 
   return (
-    <>
+    <div className="space-y-6">
+      {showFilters && (
+        <div className="flex flex-wrap gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white/90">Chart Type</label>
+            <select
+              value={selectedChart}
+              onChange={(e) => setSelectedChart(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg text-white/90 px-4 py-2 focus:outline-none focus:border-indigo-500/50"
+            >
+              <option value="distribution">Distribution Analysis</option>
+              <option value="timeSeries">Time Series</option>
+              <option value="correlation">Correlation Analysis</option>
+              <option value="categorical">Categorical Analysis</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white/90">Column</label>
+            <select
+              value={selectedColumn}
+              onChange={(e) => setSelectedColumn(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg text-white/90 px-4 py-2 focus:outline-none focus:border-indigo-500/50"
+            >
+              {processedData.summary.numericalColumns.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
         {/* Distribution Analysis */}
         <ChartCard
@@ -510,6 +553,6 @@ Please provide insights about:
         onClose={() => setModalOpen(false)}
         content={explanation}
       />
-    </>    
+    </div>
   );
 };
