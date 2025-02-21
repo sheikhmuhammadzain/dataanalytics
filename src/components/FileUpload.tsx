@@ -3,61 +3,108 @@ import { motion } from "framer-motion";
 import { Upload, Loader2 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { cn } from "../lib/utils";
-import Papa from 'papaparse';
-import { useDataStore } from '../store/dataStore';
+import Papa from "papaparse";
+import { useDataStore } from "../store/dataStore";
+
+interface ProcessedRow {
+  [key: string]: string | number | null;
+}
+
+type ParsedCSVRow = Record<string, string | number | null | undefined>;
 
 const mainVariant = {
-  initial: {
-    x: 0,
-    y: 0,
-  },
-  animate: {
-    x: 20,
-    y: -20,
-    opacity: 0.9,
-  },
+  initial: { x: 0, y: 0 },
+  animate: { x: 20, y: -20, opacity: 0.9 },
 };
 
 const secondaryVariant = {
-  initial: {
-    opacity: 0,
-  },
-  animate: {
-    opacity: 1,
-  },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
 };
 
 export const FileUpload: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const setRawData = useDataStore(state => state.setRawData);
-  const processedData = useDataStore(state => state.processedData);
+  const setRawData = useDataStore((state) => state.setRawData);
+  const processedData = useDataStore((state) => state.processedData);
+  const [uploadComplete, setUploadComplete] = useState(false);
 
   const handleFileChange = async (newFiles: File[]) => {
     if (newFiles.length === 0) return;
-    
+
     const file = newFiles[0];
     setFiles([file]);
     setIsLoading(true);
+    setProgress(0);
+    setUploadComplete(false);
 
     try {
-      await new Promise((resolve) => {
+      let rows: ProcessedRow[] = [];
+      let lastProgressUpdate = performance.now();
+
+      await new Promise((resolve, reject) => {
         Papa.parse(file, {
           header: true,
           dynamicTyping: true,
-          complete: (results) => {
-            setRawData(results.data);
-            resolve(results);
+          skipEmptyLines: true,
+          worker: true, // Offload parsing to a web worker
+          chunk: (results) => {
+            const { data, meta } = results;
+            if (!Array.isArray(data) || data.length === 0) return;
+
+            // Process each chunk into a consistent format
+            const processedRows = (data as ParsedCSVRow[]).map((row) => {
+              const processedRow: ProcessedRow = {};
+              Object.entries(row).forEach(([key, value]) => {
+                if (typeof value === "string") {
+                  const date = new Date(value);
+                  processedRow[key] = !isNaN(date.getTime())
+                    ? date.getTime()
+                    : value;
+                } else if (value === null || value === undefined) {
+                  processedRow[key] = null;
+                } else {
+                  processedRow[key] = value as number;
+                }
+              });
+              return processedRow;
+            });
+
+            rows = [...rows, ...processedRows];
+
+            // Throttle progress updates (every 100ms)
+            const now = performance.now();
+            const processedBytes = meta.cursor || 0;
+            const totalBytes = file.size;
+            const newProgress = Math.round((processedBytes / totalBytes) * 100);
+            if (now - lastProgressUpdate > 100) {
+              setProgress(newProgress);
+              lastProgressUpdate = now;
+            }
+          },
+          complete: () => {
+            setUploadComplete(true);
+            queueMicrotask(() => {
+              setRawData(rows);
+              resolve(true);
+            });
           },
           error: (error) => {
-            console.error('Error parsing CSV:', error);
-            alert('Error parsing CSV file. Please check the format and try again.');
-          }
+            console.error("Error parsing CSV:", error);
+            reject(error);
+          },
         });
       });
+    } catch (error) {
+      console.error("Error processing CSV:", error);
+      alert(
+        "Error processing CSV file. Please check the format and try again."
+      );
     } finally {
       setIsLoading(false);
+      setProgress(0);
     }
   };
 
@@ -68,20 +115,18 @@ export const FileUpload: React.FC = () => {
   const { getRootProps, isDragActive } = useDropzone({
     multiple: false,
     noClick: true,
-    accept: {
-      'text/csv': ['.csv'],
-    },
+    accept: { "text/csv": [".csv"] },
     onDrop: handleFileChange,
     onDropRejected: (error) => {
       console.log(error);
-      alert('Please upload a valid CSV file.');
+      alert("Please upload a valid CSV file.");
     },
   });
 
   if (processedData) {
     return (
       <div className="flex justify-center">
-        <button 
+        <button
           onClick={handleClick}
           disabled={isLoading}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-indigo-500/20 hover:bg-indigo-500/30 text-white/90 h-10 px-4 py-2"
@@ -91,15 +136,33 @@ export const FileUpload: React.FC = () => {
           ) : (
             <Upload className="h-5 w-5 mr-2" />
           )}
-          {isLoading ? 'Processing...' : 'Upload New CSV'}
+          {isLoading ? "Processing..." : "Upload New CSV"}
           <input
             ref={fileInputRef}
             type="file"
-            onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
+            onChange={(e) =>
+              handleFileChange(Array.from(e.target.files || []))
+            }
             className="hidden"
             accept=".csv"
           />
         </button>
+      </div>
+    );
+  }
+
+  if (uploadComplete && !processedData) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-2xl border border-indigo-500/20 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-indigo-400" />
+          <h3 className="text-xl font-semibold text-white mt-4">
+            Processing Data
+          </h3>
+          <p className="text-white/60 mt-2">
+            Preparing your visualizations...
+          </p>
+        </div>
       </div>
     );
   }
@@ -117,7 +180,9 @@ export const FileUpload: React.FC = () => {
         <input
           ref={fileInputRef}
           type="file"
-          onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
+          onChange={(e) =>
+            handleFileChange(Array.from(e.target.files || []))
+          }
           className="hidden"
           accept=".csv"
         />
@@ -131,8 +196,25 @@ export const FileUpload: React.FC = () => {
                 <div className="absolute inset-0 rounded-full blur-sm bg-indigo-500/30" />
                 <Loader2 className="h-12 w-12 text-white animate-spin" />
               </div>
-              <p className="text-white/90 text-lg font-medium mt-4">Processing CSV...</p>
-              <p className="text-white/60 text-sm mt-1">This may take a moment</p>
+              <p className="text-white/90 text-lg font-medium mt-4">
+                Processing CSV...
+              </p>
+              <p className="text-white/60 text-sm mt-1">
+                This may take a moment
+              </p>
+              {progress > 0 && (
+                <div className="w-full max-w-xs mt-4">
+                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="text-white/50 text-xs mt-2 text-center">
+                    {progress}% processed
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -150,7 +232,9 @@ export const FileUpload: React.FC = () => {
               files.map((file, idx) => (
                 <motion.div
                   key={"file" + idx}
-                  layoutId={idx === 0 ? "file-upload" : "file-upload-" + idx}
+                  layoutId={
+                    idx === 0 ? "file-upload" : "file-upload-" + idx
+                  }
                   className={cn(
                     "relative overflow-hidden z-40 bg-white/10 backdrop-blur-lg flex flex-col items-start justify-start md:h-24 p-4 mt-4 w-full mx-auto rounded-xl border border-indigo-500/20"
                   )}
@@ -173,7 +257,6 @@ export const FileUpload: React.FC = () => {
                       {(file.size / (1024 * 1024)).toFixed(2)} MB
                     </motion.p>
                   </div>
-
                   <div className="flex text-sm md:flex-row flex-col items-start md:items-center w-full mt-2 justify-between text-white/60">
                     <motion.p
                       initial={{ opacity: 0 }}
@@ -181,15 +264,15 @@ export const FileUpload: React.FC = () => {
                       layout
                       className="px-2 py-1 rounded-lg bg-white/10 backdrop-blur-lg"
                     >
-                      {file.type || 'text/csv'}
+                      {file.type || "text/csv"}
                     </motion.p>
-
                     <motion.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       layout
                     >
-                      modified {new Date(file.lastModified).toLocaleDateString()}
+                      modified{" "}
+                      {new Date(file.lastModified).toLocaleDateString()}
                     </motion.p>
                   </div>
                 </motion.div>
@@ -222,7 +305,6 @@ export const FileUpload: React.FC = () => {
                 )}
               </motion.div>
             )}
-
             {!files.length && (
               <motion.div
                 variants={secondaryVariant}

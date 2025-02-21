@@ -45,6 +45,46 @@ const ChartCard: React.FC<ChartCardProps> = ({ title, description, icon, childre
   </div>
 );
 
+const downsampleTimeSeries = (data: { x: Date; y: number }[], targetPoints: number = 1000) => {
+  if (data.length <= targetPoints) return data;
+
+  const step = Math.ceil(data.length / targetPoints);
+  const downsampled = [];
+
+  for (let i = 0; i < data.length; i += step) {
+    const chunk = data.slice(i, Math.min(i + step, data.length));
+    const avgY = chunk.reduce((sum, point) => sum + point.y, 0) / chunk.length;
+    downsampled.push({
+      x: chunk[0].x, // Keep the first timestamp in the chunk
+      y: avgY,
+    });
+  }
+
+  return downsampled;
+};
+
+const detectTimeColumn = (headers: string[], rows: any[]) => {
+  const sampleSize = Math.min(100, rows.length);
+  const dateScores = headers.map(header => {
+    let dateCount = 0;
+    for (let i = 0; i < sampleSize; i++) {
+      const value = rows[i][header];
+      if (!value) continue;
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        dateCount++;
+      }
+    }
+    return { header, score: dateCount / sampleSize };
+  });
+
+  const bestMatch = dateScores.reduce((best, current) => 
+    current.score > best.score ? current : best
+  , { header: '', score: 0 });
+
+  return bestMatch.score > 0.8 ? bestMatch.header : null;
+};
+
 export const DefaultVisualizations: React.FC = () => {
   const processedData = useDataStore(state => state.processedData);
 
@@ -101,28 +141,34 @@ export const DefaultVisualizations: React.FC = () => {
       y: bin.length,
     }));
 
-    // Time series data (if available)
-    const timeColumn = processedData.headers.find(h => 
-      h.toLowerCase().includes('date') || h.toLowerCase().includes('time')
-    );
-    const timeSeriesData = timeColumn ? processedData.rows
-      .map(row => ({
-        x: new Date(row[timeColumn]),
-        y: Number(row[primaryColumn]),
-      }))
-      .filter(d => !isNaN(d.y) && !isNaN(d.x.getTime()))
-      .sort((a, b) => a.x.getTime() - b.x.getTime()) : null;
+    // Improved time series detection and processing
+    const timeColumn = detectTimeColumn(processedData.headers, processedData.rows);
+    const timeSeriesData = timeColumn ? 
+      downsampleTimeSeries(
+        processedData.rows
+          .map(row => ({
+            x: new Date(row[timeColumn]),
+            y: Number(row[primaryColumn]),
+          }))
+          .filter(d => !isNaN(d.y) && !isNaN(d.x.getTime()))
+          .sort((a, b) => a.x.getTime() - b.x.getTime())
+      ) : null;
 
-    // Category data
+    // Improved category data processing
     const categoryColumn = processedData.summary.categoricalColumns[0];
     const categoryData = categoryColumn ? 
       Object.entries(
         processedData.rows.reduce((acc, row) => {
-          const cat = String(row[categoryColumn]);
-          acc[cat] = (acc[cat] || 0) + Number(row[primaryColumn]) || 0;
+          const cat = String(row[categoryColumn] || 'Unknown');
+          if (!acc[cat]) acc[cat] = 0;
+          // Count occurrences instead of summing values
+          acc[cat]++;
           return acc;
         }, {} as Record<string, number>)
-      ) : null;
+      )
+      .sort((a, b) => b[1] - a[1]) // Sort by frequency
+      .slice(0, 10) // Take top 10 categories
+    : null;
 
     // Correlation data
     const correlationData = numericColumns.length > 1 ? {
@@ -180,10 +226,26 @@ export const DefaultVisualizations: React.FC = () => {
               mode: 'lines',
               x: chartData.timeSeriesData.map(d => d.x),
               y: chartData.timeSeriesData.map(d => d.y),
-              line: { color: COLORS[1] },
+              line: { 
+                color: COLORS[1],
+                shape: 'spline',
+                smoothing: 0.3,
+              },
             }]}
-            layout={{ ...defaultLayout }}
-            config={defaultConfig}
+            layout={{
+              ...defaultLayout,
+              xaxis: {
+                ...defaultLayout.xaxis,
+                type: 'date',
+                tickformat: '%Y-%m-%d',
+                nticks: 10,
+              },
+            }}
+            config={{
+              ...defaultConfig,
+              displayModeBar: true,
+              modeBarButtonsToAdd: ['zoom2d', 'pan2d', 'resetScale2d'],
+            }}
             style={{ width: '100%', height: '100%' }}
             useResizeHandler
           />
@@ -197,7 +259,7 @@ export const DefaultVisualizations: React.FC = () => {
       {/* Category Comparison */}
       <ChartCard
         title="Category Comparison"
-        description="Values across categories"
+        description="Distribution of categories"
         icon={<BarChart2 className="h-5 w-5 text-indigo-400" />}
       >
         {chartData.categoryData ? (
@@ -205,10 +267,24 @@ export const DefaultVisualizations: React.FC = () => {
             data={[{
               type: 'bar',
               x: chartData.categoryData.map(([cat]) => cat),
-              y: chartData.categoryData.map(([, val]) => val),
+              y: chartData.categoryData.map(([, count]) => count),
               marker: { color: COLORS[2] },
+              text: chartData.categoryData.map(([, count]) => count),
+              textposition: 'auto',
             }]}
-            layout={{ ...defaultLayout, barmode: 'group' }}
+            layout={{
+              ...defaultLayout,
+              barmode: 'group',
+              xaxis: {
+                ...defaultLayout.xaxis,
+                tickangle: -45,
+                title: processedData?.summary.categoricalColumns[0] || '',
+              },
+              yaxis: {
+                ...defaultLayout.yaxis,
+                title: 'Count',
+              },
+            }}
             config={defaultConfig}
             style={{ width: '100%', height: '100%' }}
             useResizeHandler

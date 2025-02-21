@@ -1,139 +1,162 @@
-import { create } from 'zustand';
-import { DataRow, DataStore, ProcessedData, ColumnStats } from '../types/data';
+import { create } from "zustand";
+import { mean, median, deviation } from "d3-array";
 
-const calculateStats = (data: (string | number | null)[], isNumeric: boolean): ColumnStats => {
-  // Filter out null/undefined values and convert to strings for counting
-  const cleanData = data.filter(val => val !== null && val !== undefined);
-  const stringData = cleanData.map(val => String(val));
+interface ColumnStats {
+  min?: number;
+  max?: number;
+  mean?: number;
+  median?: number;
+  stdDev?: number;
+}
 
-  const stats: ColumnStats = {
-    uniqueValues: new Set(stringData).size,
-    mostCommon: Object.entries(
-      stringData.reduce((acc, val) => {
-        acc[val] = (acc[val] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>)
-    )
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([value, count]) => ({ value, count }))
-  };
+interface DataSummary {
+  rowCount: number;
+  columnCount: number;
+  headers: string[];
+  numericalColumns: string[];
+  categoricalColumns: string[];
+  columnStats: Record<string, ColumnStats>;
+}
 
-  if (isNumeric) {
-    const numericData = cleanData
-      .map(v => (typeof v === 'number' ? v : Number(v)))
-      .filter(v => !isNaN(v));
+interface ProcessedData {
+  rows: Record<string, string | number | null>[];
+  headers: string[];
+  summary: DataSummary;
+}
 
-    if (numericData.length > 0) {
-      numericData.sort((a, b) => a - b);
-      stats.min = Math.min(...numericData);
-      stats.max = Math.max(...numericData);
-      stats.mean = numericData.reduce((a, b) => a + b, 0) / numericData.length;
-      stats.median = numericData[Math.floor(numericData.length / 2)];
+interface DataStore {
+  rawData: Record<string, string | number | null>[] | null;
+  processedData: ProcessedData | null;
+  filterValue: string;
+  selectedColumns: string[];
+  setRawData: (data: Record<string, string | number | null>[]) => void;
+  setFilterValue: (value: string) => void;
+  setSelectedColumns: (columns: string[]) => void;
+  getFilteredData: () => Record<string, string | number | null>[];
+}
+
+const processData = (
+  rawData: Record<string, string | number | null>[]
+): ProcessedData | null => {
+  if (!rawData || rawData.length === 0) return null;
+
+  // Extract headers from the first row
+  const headers = Object.keys(rawData[0]);
+
+  // Determine column types by sampling (first 1,000 rows or less)
+  const columnTypes = new Map<string, "numerical" | "categorical">();
+  const numericalValues: Record<string, number[]> = {};
+
+  headers.forEach((header) => {
+    const sampleSize = Math.min(1000, rawData.length);
+    let numericCount = 0;
+    for (let i = 0; i < sampleSize; i++) {
+      const value = rawData[i][header];
+      if (typeof value === "number" && !isNaN(value)) {
+        numericCount++;
+      }
     }
-  }
+    if (numericCount >= 0.7 * sampleSize) {
+      columnTypes.set(header, "numerical");
+      numericalValues[header] = [];
+    } else {
+      columnTypes.set(header, "categorical");
+    }
+  });
 
-  return stats;
+  // Single pass: accumulate numerical values
+  rawData.forEach((row) => {
+    headers.forEach((header) => {
+      if (columnTypes.get(header) === "numerical") {
+        const value = row[header];
+        if (typeof value === "number" && !isNaN(value)) {
+          numericalValues[header].push(value);
+        }
+      }
+    });
+  });
+
+  // Calculate statistics for each numerical column
+  const columnStats: Record<string, ColumnStats> = {};
+  headers.forEach((header) => {
+    if (columnTypes.get(header) === "numerical") {
+      const values = numericalValues[header];
+      if (values.length > 0) {
+        columnStats[header] = {
+          min: Math.min(...values),
+          max: Math.max(...values),
+          mean: mean(values),
+          median: median(values),
+          stdDev: deviation(values),
+        };
+      }
+    }
+  });
+
+  const numericalColumns = headers.filter(
+    (h) => columnTypes.get(h) === "numerical"
+  );
+  const categoricalColumns = headers.filter(
+    (h) => columnTypes.get(h) === "categorical"
+  );
+
+  return {
+    rows: rawData,
+    headers,
+    summary: {
+      rowCount: rawData.length,
+      columnCount: headers.length,
+      headers,
+      numericalColumns,
+      categoricalColumns,
+      columnStats,
+    },
+  };
 };
 
 export const useDataStore = create<DataStore>((set, get) => ({
-  rawData: [],
+  rawData: null,
   processedData: null,
+  filterValue: "",
   selectedColumns: [],
-  filterValue: '',
-
-  setSelectedColumns: (columns: string[]) => set({ selectedColumns: columns }),
-  setFilterValue: (value: string) => set({ filterValue: value }),
-
-  setRawData: (data: DataRow[]) => {
-    // Filter out empty rows
-    const cleanData = data.filter(row => {
-      return Object.values(row).some(value => 
-        value !== null && 
-        value !== undefined && 
-        value !== '' && 
-        !(typeof value === 'string' && value.trim() === '')
-      );
-    });
-
-    if (cleanData.length === 0) {
-      console.error('No valid data found in CSV');
+  setRawData: (data) => {
+    if (!data || data.length === 0) {
+      set({ rawData: null, processedData: null, selectedColumns: [] });
       return;
     }
 
-    set({ rawData: cleanData });
-    get().processData();
+    // Process data asynchronously to prevent blocking the UI
+    Promise.resolve().then(() => {
+      const processed = processData(data);
+      if (processed) {
+        set({
+          rawData: data,
+          processedData: processed,
+          selectedColumns: processed.headers,
+        });
+      }
+    });
   },
-
+  setFilterValue: (value) => set({ filterValue: value }),
+  setSelectedColumns: (columns) => set({ selectedColumns: columns }),
   getFilteredData: () => {
-    const { processedData, filterValue } = get();
+    const { processedData, filterValue, selectedColumns } = get();
     if (!processedData) return [];
 
-    if (!filterValue.trim()) return processedData.rows;
+    const searchTerms = filterValue
+      .toLowerCase()
+      .split(" ")
+      .filter(Boolean);
+    if (!searchTerms.length) return processedData.rows;
 
-    const searchTerm = filterValue.toLowerCase();
-    return processedData.rows.filter(row => 
-      Object.entries(row).some(([_, value]) => {
-        if (value === null || value === undefined) return false;
-        return String(value).toLowerCase().includes(searchTerm);
-      })
+    return processedData.rows.filter((row) =>
+      searchTerms.every((term) =>
+        selectedColumns.some((col) => {
+          const value = row[col];
+          if (value == null) return false;
+          return String(value).toLowerCase().includes(term);
+        })
+      )
     );
-  },
-
-  processData: () => {
-    const rawData = get().rawData;
-    if (!rawData.length) return;
-
-    const headers = Object.keys(rawData[0]);
-    const numericalColumns: string[] = [];
-    const categoricalColumns: string[] = [];
-    const columnStats: Record<string, ColumnStats> = {};
-
-    // Identify column types and calculate statistics
-    headers.forEach(header => {
-      const values = rawData.map(row => row[header]);
-      
-      // Check if column is numeric by testing all non-null values
-      const isNumeric = values.every(val => 
-        val === null || 
-        val === undefined || 
-        val === '' || 
-        (typeof val === 'number' || !isNaN(Number(val)))
-      );
-      
-      if (isNumeric) {
-        numericalColumns.push(header);
-      } else {
-        categoricalColumns.push(header);
-      }
-
-      columnStats[header] = calculateStats(values, isNumeric);
-    });
-
-    // Process numerical values
-    const rows = rawData.map(row => {
-      const processedRow = { ...row };
-      numericalColumns.forEach(col => {
-        const value = row[col];
-        processedRow[col] = value === null || value === undefined || value === '' 
-          ? null 
-          : Number(value);
-      });
-      return processedRow;
-    });
-
-    const processedData: ProcessedData = {
-      headers,
-      rows,
-      summary: {
-        numericalColumns,
-        categoricalColumns,
-        rowCount: rows.length,
-        columnCount: headers.length,
-        columnStats,
-      },
-    };
-
-    set({ processedData, selectedColumns: headers });
   },
 }));
