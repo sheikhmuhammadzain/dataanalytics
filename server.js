@@ -23,6 +23,11 @@ app.post('/api/chat', async (req, res) => {
   try {
     const { prompt, context } = req.body;
 
+    // Set headers for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
     const completion = await groq.chat.completions.create({
       messages: [
         {
@@ -37,9 +42,19 @@ app.post('/api/chat', async (req, res) => {
       model: "deepseek-r1-distill-qwen-32b",
       temperature: 0.7,
       max_tokens: 1000,
+      stream: true, // Enable streaming
     });
 
-    res.json({ response: completion.choices[0]?.message?.content || "No response generated" });
+    // Stream the response
+    for await (const chunk of completion) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'Failed to get chat completion' });

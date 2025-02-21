@@ -3,12 +3,9 @@ import { FileUpload } from './components/FileUpload';
 import { DataSummary } from './components/DataSummary';
 import { DataVisualizations } from './components/DataVisualizations';
 import { DataTable } from './components/DataTable';
-import { ColumnSelector } from './components/ColumnSelector';
-import { ColumnStatistics } from './components/ColumnStatistics';
-import { SearchFilter } from './components/SearchFilter';
 import { DataChat } from './components/DataChat';
 import { useDataStore } from './store/dataStore';
-import { BarChart2 } from 'lucide-react';
+import { BarChart2, LineChart, Bot, Table2, ArrowRight } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 
 function App() {
@@ -19,66 +16,97 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
+    <div className="min-h-screen bg-[#0a0118]">
+      {/* Header */}
+      <header className="border-b border-indigo-500/10 bg-[#0a0118]/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <BarChart2 className="h-6 w-6" />
-            <h1 className="font-bold text-xl">AwaisAnalytics</h1>
+            <BarChart2 className="h-6 w-6 text-indigo-500" />
+            <h1 className="font-bold text-xl bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">
+              AwaisAnalytics
+            </h1>
           </div>
           <FileUpload />
         </div>
       </header>
 
-      <main className="container py-8 space-y-8">
-        <div className="grid gap-8">
+      {/* Hero Section */}
+      <div className="relative border-b border-indigo-500/10 bg-[#0a0118] overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
+        </div>
+        
+        <div className="container relative py-12">
           <DataSummary />
-          
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Data Exploration</h3>
-            <SearchFilter />
+        </div>
+      </div>
+
+      <main className="container py-8 space-y-8">
+        {/* Analytics Dashboard */}
+        <div className="grid gap-6">
+          {/* Default Visualizations */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold text-white">Distribution Analysis</h3>
+                  <p className="text-sm text-white/50">Analyze the distribution of numerical variables</p>
+                </div>
+                <button className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors text-sm">
+                  View Details
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+              <DataVisualizations defaultView="distribution" />
+            </div>
+
+            <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold text-white">Correlation Analysis</h3>
+                  <p className="text-sm text-white/50">Explore relationships between variables</p>
+                </div>
+                <button className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors text-sm">
+                  View Details
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+              <DataVisualizations defaultView="correlation" />
+            </div>
           </div>
 
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4">AI Chat Assistant</h3>
+          {/* AI Chat */}
+          <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-white">AI Chat Assistant</h3>
+                <p className="text-sm text-white/50">Get instant insights about your data</p>
+              </div>
+              <Bot className="h-5 w-5 text-indigo-400" />
+            </div>
             <DataChat />
           </div>
 
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Column Selection</h3>
-            <ColumnSelector />
-          </div>
-
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Column Statistics</h3>
-            <ColumnStatistics />
-          </div>
-
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Visualizations</h3>
-            <DataVisualizations />
-          </div>
-
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4">Data Preview</h3>
+          {/* Data Preview */}
+          <div className="rounded-2xl border border-indigo-500/10 bg-white/5 backdrop-blur-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-white">Data Preview</h3>
+                <p className="text-sm text-white/50">Browse and search through your dataset</p>
+              </div>
+              <Table2 className="h-5 w-5 text-indigo-400" />
+            </div>
             <DataTable />
           </div>
         </div>
       </main>
 
-      <footer className="border-t py-6">
+      <footer className="border-t border-indigo-500/10 py-6 bg-[#0a0118]/50 backdrop-blur-xl">
         <div className="container flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/50">
             © 2024 AwaisAnalytics. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
-            <a href="#privacy" className="text-sm text-muted-foreground hover:underline">
-              Privacy Policy
-            </a>
-            <a href="#terms" className="text-sm text-muted-foreground hover:underline">
-              Terms of Service
-            </a>
-          </div>
         </div>
       </footer>
     </div>
