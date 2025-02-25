@@ -23,6 +23,7 @@
     "@visx/visx": "^3.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "clx": "^1.0.0",
     "d3-array": "^3.2.4",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
@@ -39,7 +40,7 @@
     "react-markdown": "^10.0.0",
     "react-plotly.js": "^2.6.0",
     "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1",
+    "tailwind-merge": "^3.0.2",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

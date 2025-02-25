@@ -50,48 +50,68 @@ interface DataStore {
   resetError: () => void;
 }
 
-const processData = (
+const CHUNK_SIZE = 10000; // Process data in chunks of 10k rows
+const SAMPLE_SIZE = 1000; // Sample size for column type detection
+
+const processDataInChunks = async (
   rawData: Record<string, string | number | null>[]
-): ProcessedData | null => {
+): Promise<ProcessedData | null> => {
   if (!rawData || rawData.length === 0) return null;
 
-  // Extract headers from the first row
   const headers = Object.keys(rawData[0]);
-
-  // Determine column types by sampling (first 1,000 rows or less)
   const columnTypes = new Map<string, "numerical" | "categorical">();
   const numericalValues: Record<string, number[]> = {};
 
+  // Initialize numerical values arrays
+  headers.forEach(header => {
+    numericalValues[header] = [];
+  });
+
+  // Sample first chunk for column type detection
+  const sampleSize = Math.min(SAMPLE_SIZE, rawData.length);
+  const sampleData = rawData.slice(0, sampleSize);
+
+  // Determine column types from sample
   headers.forEach((header) => {
-    const sampleSize = Math.min(1000, rawData.length);
     let numericCount = 0;
-    for (let i = 0; i < sampleSize; i++) {
-      const value = rawData[i][header];
+    for (const row of sampleData) {
+      const value = row[header];
       if (typeof value === "number" && !isNaN(value)) {
         numericCount++;
       }
     }
     if (numericCount >= 0.7 * sampleSize) {
       columnTypes.set(header, "numerical");
-      numericalValues[header] = [];
     } else {
       columnTypes.set(header, "categorical");
     }
   });
 
-  // Single pass: accumulate numerical values
-  rawData.forEach((row) => {
-    headers.forEach((header) => {
-      if (columnTypes.get(header) === "numerical") {
-        const value = row[header];
-        if (typeof value === "number" && !isNaN(value)) {
-          numericalValues[header].push(value);
-        }
-      }
-    });
-  });
+  // Process data in chunks
+  const totalChunks = Math.ceil(rawData.length / CHUNK_SIZE);
+  
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, rawData.length);
+    const chunk = rawData.slice(start, end);
 
-  // Calculate statistics for each numerical column
+    // Process chunk
+    for (const row of chunk) {
+      headers.forEach((header) => {
+        if (columnTypes.get(header) === "numerical") {
+          const value = row[header];
+          if (typeof value === "number" && !isNaN(value)) {
+            numericalValues[header].push(value);
+          }
+        }
+      });
+    }
+
+    // Allow UI to update by yielding to event loop
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  // Calculate statistics for numerical columns
   const columnStats: Record<string, ColumnStats> = {};
   headers.forEach((header) => {
     if (columnTypes.get(header) === "numerical") {
@@ -108,12 +128,8 @@ const processData = (
     }
   });
 
-  const numericalColumns = headers.filter(
-    (h) => columnTypes.get(h) === "numerical"
-  );
-  const categoricalColumns = headers.filter(
-    (h) => columnTypes.get(h) === "categorical"
-  );
+  const numericalColumns = headers.filter(h => columnTypes.get(h) === "numerical");
+  const categoricalColumns = headers.filter(h => columnTypes.get(h) === "categorical");
 
   return {
     rows: rawData,
@@ -153,9 +169,9 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
     set({ isProcessing: true, error: null });
 
-    Promise.resolve().then(() => {
-      try {
-        const processed = processData(data);
+    // Use async processing
+    processDataInChunks(data)
+      .then((processed) => {
         if (processed) {
           set({
             rawData: data,
@@ -172,13 +188,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
             error: null
           });
         }
-      } catch (error) {
+      })
+      .catch((error) => {
         set({ 
           isProcessing: false, 
           error: error instanceof Error ? error.message : 'Error processing data' 
         });
-      }
-    });
+      });
   },
   setFilterValue: (value) => set({ filterValue: value }),
   setSelectedColumns: (columns) => set({ selectedColumns: columns }),
@@ -202,12 +218,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
       )
     );
   },
-  updateData: (rows, headers) => {
+  updateData: async (rows, headers) => {
     const { processedData, transformationHistory, currentHistoryIndex } = get();
     if (!processedData) return;
 
     try {
-      const newProcessedData = processData(rows);
+      const newProcessedData = await processDataInChunks(rows);
       if (!newProcessedData) return;
 
       if (headers) {

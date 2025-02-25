@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import '../styles/sunray.css'
 import { 
   FileText, 
   BarChart2, 
@@ -141,20 +142,22 @@ export const LandingPage: React.FC = () => {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section */}
+        {/* Updated Hero Section */}
         <section className="relative py-20 sm:py-28">
           <div className="container">
-            <motion.div 
-              initial="initial"
-              animate="animate"
-              variants={stagger}
-              className="flex flex-col lg:flex-row items-center gap-12"
-            >
-              <motion.div 
-                variants={fadeIn}
-                className="flex-1 space-y-8 max-w-3xl"
+            <div className="relative">
+              {/* Sunray beam effect */}
+              <div className="absolute inset-0">
+                <div className="sunray-beam" />
+              </div>
+              <motion.div
+                initial="initial"
+                animate="animate"
+                variants={stagger}
+                className="flex flex-col lg:flex-row items-center justify-between gap-12"
               >
-                <div className="space-y-6">
+                {/* Left Side: Text */}
+                <motion.div variants={fadeIn} className="lg:w-1/2 space-y-8">
                   <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white">
                     Transform Your CSV Data into{' '}
                     <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 text-transparent bg-clip-text">
@@ -162,55 +165,16 @@ export const LandingPage: React.FC = () => {
                     </span>
                   </h1>
                   <p className="text-lg sm:text-xl text-white/70">
-                    Upload your CSV data and instantly get AI-powered analytics, beautiful visualizations, and deep insights. No coding required.
+                    Upload your CSV data and instantly get AI-powered analytics,
+                    beautiful visualizations, and deep insights. No coding required.
                   </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <div className="w-full sm:w-auto">
-                    <FileUpload />
-                  </div>
-                  <div className="flex gap-6 items-center text-sm text-white/50">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-indigo-400" />
-                      <span>AI-Powered Analysis</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <LineChart className="h-4 w-4 text-indigo-400" />
-                      <span>Interactive Charts</span>
-                    </div>
-                  </div>
-                </div>
+                </motion.div>
+                {/* Right Side: Upload Component with enhanced styling */}
+                <motion.div variants={fadeIn} className="lg:w-1/2 flex justify-center">
+                  <FileUpload className="px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg shadow-lg hover:shadow-xl transition-shadow" />
+                </motion.div>
               </motion.div>
-
-              {/* Feature preview cards */}
-              <motion.div 
-                variants={fadeIn}
-                className="w-full lg:w-auto"
-              >
-                <div className="relative max-w-md mx-auto lg:mx-0">
-                  <div className="absolute top-0 -left-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
-                  <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
-                  <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
-                  
-                  <div className="relative space-y-4">
-                    {visualizations.map((viz, index) => (
-                      <motion.div
-                        key={viz.title}
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10"
-                        style={{ marginLeft: `${index * 1.5}rem` }}
-                      >
-                        <div className="flex items-center gap-3 text-white/70">
-                          {viz.icon}
-                          <span className="font-medium">{viz.title}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
+            </div>
           </div>
         </section>
 
@@ -412,4 +376,4 @@ export const LandingPage: React.FC = () => {
       </footer>
     </div>
   );
-}; 
+};
